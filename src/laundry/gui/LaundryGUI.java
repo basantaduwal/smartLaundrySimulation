@@ -55,7 +55,7 @@ public class LaundryGUI extends JFrame {
 
     // Control components
     private JButton launchButton;
-    private JToggleButton modeToggle;
+    private JCheckBox bonusCheckBox;
     private JLabel facilityStatusBadge;
 
     // Machine card panels
@@ -148,22 +148,33 @@ public class LaundryGUI extends JFrame {
         brandBox.add(subtitle);
 
         // Action Toolbar
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 14, 0));
         actions.setOpaque(false);
 
         facilityStatusBadge = new JLabel("● SYSTEM READY");
         facilityStatusBadge.setFont(new Font("Segoe UI", Font.BOLD, 12));
         facilityStatusBadge.setForeground(new Color(52, 211, 153)); // Soft green
 
-        modeToggle = new JToggleButton("Simulate Kiosk Outage (Bonus)");
-        modeToggle.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        modeToggle.setFocusPainted(false);
-        modeToggle.setBackground(THEME_SECONDARY);
-        modeToggle.setForeground(Color.WHITE);
-        modeToggle.setBorder(new EmptyBorder(6, 12, 6, 12));
-        modeToggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        // Clean, unambiguous checkbox with clear contrast and state feedback
+        bonusCheckBox = new JCheckBox("Bonus: Force Kiosks Down (Congested Mode)");
+        bonusCheckBox.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        bonusCheckBox.setFocusPainted(false);
+        bonusCheckBox.setOpaque(false);
+        bonusCheckBox.setForeground(new Color(226, 232, 240)); // High-contrast crisp light silver
+        bonusCheckBox.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        bonusCheckBox.addActionListener(e -> {
+            if (bonusCheckBox.isSelected()) {
+                bonusCheckBox.setForeground(new Color(252, 211, 77)); // Warm amber highlight when checked
+                facilityStatusBadge.setText("● BONUS MODE ARMED");
+                facilityStatusBadge.setForeground(new Color(252, 211, 77));
+            } else {
+                bonusCheckBox.setForeground(new Color(226, 232, 240));
+                facilityStatusBadge.setText("● SYSTEM READY");
+                facilityStatusBadge.setForeground(new Color(52, 211, 153));
+            }
+        });
 
-        launchButton = new JButton("Launch Simulation");
+        launchButton = new JButton("▶ Launch Simulation");
         launchButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
         launchButton.setFocusPainted(false);
         launchButton.setBackground(new Color(14, 165, 233)); // Sky blue
@@ -173,7 +184,7 @@ public class LaundryGUI extends JFrame {
         launchButton.addActionListener(e -> onLaunchSimulation());
 
         actions.add(facilityStatusBadge);
-        actions.add(modeToggle);
+        actions.add(bonusCheckBox);
         actions.add(launchButton);
 
         bar.add(brandBox, BorderLayout.WEST);
@@ -223,14 +234,16 @@ public class LaundryGUI extends JFrame {
         colHeader.add(queueBadge, BorderLayout.EAST);
         col.add(colHeader, BorderLayout.NORTH);
 
-        // Cards Grid (Dynamic rows depending on count)
-        int rows = (count > 4) ? 3 : (count == 4 ? 2 : 1);
-        int cols = (count > 4) ? 2 : (count == 4 ? 2 : 2);
+        // Responsive grid: single column for 2 or 4 machines, 2 columns for 6 machines
+        // Gives each card plenty of width so text never truncates to '...'
+        int rows = (count == 6) ? 3 : count;
+        int cols = (count == 6) ? 2 : 1;
         JPanel grid = new JPanel(new GridLayout(rows, cols, 8, 8));
         grid.setOpaque(false);
 
         for (int i = 0; i < count; i++) {
-            cardArray[i] = new MachineCard(typeName + " #" + (i + 1));
+            // Compact name format like "Washer 1", "Dryer 1", "Kiosk 1"
+            cardArray[i] = new MachineCard(typeName + " " + (i + 1));
             grid.add(cardArray[i]);
         }
 
@@ -384,7 +397,7 @@ public class LaundryGUI extends JFrame {
             return;
         }
 
-        boolean bonusMode = modeToggle.isSelected();
+        boolean bonusMode = bonusCheckBox.isSelected();
 
         // Fresh state
         this.facility = new LaundryFacility();
@@ -392,7 +405,7 @@ public class LaundryGUI extends JFrame {
         logStream.setText("");
 
         launchButton.setEnabled(false);
-        modeToggle.setEnabled(false);
+        bonusCheckBox.setEnabled(false);
         facilityStatusBadge.setText("● SIMULATION RUNNING (" + (bonusMode ? "BONUS" : "NORMAL") + ")");
         facilityStatusBadge.setForeground(new Color(14, 165, 233));
 
@@ -403,7 +416,7 @@ public class LaundryGUI extends JFrame {
             runner.run();
             SwingUtilities.invokeLater(() -> {
                 launchButton.setEnabled(true);
-                modeToggle.setEnabled(true);
+                bonusCheckBox.setEnabled(true);
                 facilityStatusBadge.setText("● COMPLETED");
                 facilityStatusBadge.setForeground(new Color(16, 185, 129));
             });
@@ -491,27 +504,27 @@ public class LaundryGUI extends JFrame {
         private final JLabel occupantBadge;
 
         public MachineCard(String name) {
-            setLayout(new BorderLayout(4, 4));
+            setLayout(new BorderLayout(4, 2));
             setBackground(COLOR_IDLE_CARD);
             setBorder(new CompoundBorder(
                     new LineBorder(new Color(226, 232, 240), 1, true),
-                    new EmptyBorder(8, 10, 8, 10)
+                    new EmptyBorder(6, 8, 6, 8)
             ));
 
             nameLabel = new JLabel(name);
-            nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
             nameLabel.setForeground(THEME_TEXT_MAIN);
 
-            statusLabel = new JLabel("AVAILABLE");
+            statusLabel = new JLabel("IDLE");
             statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));
             statusLabel.setForeground(new Color(100, 116, 139));
 
             occupantBadge = new JLabel("—", SwingConstants.CENTER);
-            occupantBadge.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            occupantBadge.setFont(new Font("Segoe UI", Font.BOLD, 11));
             occupantBadge.setOpaque(true);
             occupantBadge.setBackground(new Color(241, 245, 249));
             occupantBadge.setForeground(new Color(148, 163, 184));
-            occupantBadge.setPreferredSize(new Dimension(50, 24));
+            occupantBadge.setPreferredSize(new Dimension(42, 22));
             occupantBadge.setBorder(new LineBorder(new Color(226, 232, 240), 1, true));
 
             JPanel textCol = new JPanel();
@@ -530,7 +543,7 @@ public class LaundryGUI extends JFrame {
                     setBackground(new Color(239, 246, 255)); // Soft blue
                     setBorder(new CompoundBorder(
                             new LineBorder(COLOR_ACTIVE, 1, true),
-                            new EmptyBorder(8, 10, 8, 10)
+                            new EmptyBorder(6, 8, 6, 8)
                     ));
                     statusLabel.setText("ACTIVE");
                     statusLabel.setForeground(COLOR_ACTIVE);
@@ -542,11 +555,11 @@ public class LaundryGUI extends JFrame {
                     setBackground(new Color(254, 242, 242)); // Soft red
                     setBorder(new CompoundBorder(
                             new LineBorder(COLOR_FAULT, 1, true),
-                            new EmptyBorder(8, 10, 8, 10)
+                            new EmptyBorder(6, 8, 6, 8)
                     ));
-                    statusLabel.setText("FAULTED");
+                    statusLabel.setText("FAULT");
                     statusLabel.setForeground(COLOR_FAULT);
-                    occupantBadge.setText(customerId > 0 ? "C" + customerId + "!" : "FAULT");
+                    occupantBadge.setText(customerId > 0 ? "C" + customerId + "!" : "FAIL");
                     occupantBadge.setBackground(COLOR_FAULT);
                     occupantBadge.setForeground(Color.WHITE);
                     break;
@@ -554,9 +567,9 @@ public class LaundryGUI extends JFrame {
                     setBackground(new Color(255, 251, 235)); // Soft amber
                     setBorder(new CompoundBorder(
                             new LineBorder(COLOR_RETRYING, 1, true),
-                            new EmptyBorder(8, 10, 8, 10)
+                            new EmptyBorder(6, 8, 6, 8)
                     ));
-                    statusLabel.setText("RETRYING");
+                    statusLabel.setText("RETRY");
                     statusLabel.setForeground(COLOR_RETRYING);
                     occupantBadge.setText("C" + customerId);
                     occupantBadge.setBackground(COLOR_RETRYING);
@@ -566,9 +579,9 @@ public class LaundryGUI extends JFrame {
                     setBackground(COLOR_IDLE_CARD);
                     setBorder(new CompoundBorder(
                             new LineBorder(new Color(226, 232, 240), 1, true),
-                            new EmptyBorder(8, 10, 8, 10)
+                            new EmptyBorder(6, 8, 6, 8)
                     ));
-                    statusLabel.setText("AVAILABLE");
+                    statusLabel.setText("IDLE");
                     statusLabel.setForeground(new Color(100, 116, 139));
                     occupantBadge.setText("—");
                     occupantBadge.setBackground(new Color(241, 245, 249));
