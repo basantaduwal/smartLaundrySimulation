@@ -19,21 +19,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * LaundryGUI — Modern Facility Command Center Layout
- *
- * Distinct Architecture:
- *  - Top Header: Gradient/Navy title banner with live facility status badge + action toolbar
- *  - 3-Column Pipeline Overview:
- *      [ Column 1: Wash Bay ]      [ Column 2: Drying Area ]   [ Column 3: Payment Hub ]
- *      - Queue pill counter        - Queue pill counter        - Queue pill counter
- *      - Vertical machine cards    - Vertical machine cards    - Vertical machine cards
- *        (shows status icon,         (shows status icon,         (shows status icon,
- *         machine label, customer)    machine label, customer)    machine label, customer)
- *  - Right-Hand Metrics Bar:
- *      - KPI metric cards (Served, Avg Turnaround, Capacity Peak, Fault counters)
- *      - Congestion threshold warning bar (shows 0-30 progress toward owner call)
- *  - Bottom Panel:
- *      - Filterable-style activity terminal with timestamp & event category
+ * GUI dashboard for the laundry simulation.
+ * Displays real-time machine states, queue lengths, live metrics, and event logs.
  */
 public class LaundryGUI extends JFrame {
 
@@ -192,9 +179,7 @@ public class LaundryGUI extends JFrame {
         return bar;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 2. WORKFLOW STAGES (3 Columns: Washers, Dryers, Payment Kiosks)
-    // ─────────────────────────────────────────────────────────────────────────
+    // Pipeline stages: Washers, Dryers, Payment Kiosks
     private JPanel createPipelineStagePanel() {
         JPanel stages = new JPanel(new GridLayout(1, 3, 12, 0));
         stages.setOpaque(false);
@@ -339,9 +324,7 @@ public class LaundryGUI extends JFrame {
         return valLbl;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 4. LOWER ACTIVITY CONSOLE
-    // ─────────────────────────────────────────────────────────────────────────
+    // Console log panel
     private JPanel createActivityConsole() {
         JPanel console = new JPanel(new BorderLayout());
         console.setBackground(THEME_CARD_BG);
@@ -355,11 +338,11 @@ public class LaundryGUI extends JFrame {
         bar.setOpaque(false);
         bar.setBorder(new EmptyBorder(0, 0, 6, 0));
 
-        JLabel lbl = new JLabel("SYSTEM EVENT TRACE (AUDIT LOG)");
+        JLabel lbl = new JLabel("System Event Log");
         lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
         lbl.setForeground(THEME_TEXT_MUTED);
 
-        JButton clearBtn = new JButton("Clear Trace");
+        JButton clearBtn = new JButton("Clear");
         clearBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         clearBtn.setFocusPainted(false);
         clearBtn.setBackground(new Color(241, 245, 249));
@@ -386,9 +369,7 @@ public class LaundryGUI extends JFrame {
         return console;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // SIMULATION LAUNCH LOGIC
-    // ─────────────────────────────────────────────────────────────────────────
+    // Handles simulation execution in a background thread
     private void onLaunchSimulation() {
         if (simExecutionThread != null && simExecutionThread.isAlive()) {
             JOptionPane.showMessageDialog(this,
@@ -425,9 +406,7 @@ public class LaundryGUI extends JFrame {
         simExecutionThread.start();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // REAL-TIME DASHBOARD REFRESHER
-    // ─────────────────────────────────────────────────────────────────────────
+    // Timer that updates GUI components every 150ms on the EDT
     private void startMetricsPoller() {
         poller = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "DashboardPoller");
