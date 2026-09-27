@@ -57,14 +57,15 @@ public class Customer extends Thread {
     }
 
     private void performWashing() throws InterruptedException {
-        log("WAITING for a washing machine... (Washer queue: "
-                + facility.getWasherQueueLength() + " ahead)");
-
-        WashingMachine machine = facility.acquireWasher(customerId);
-        log("ACQUIRED Washing Machine #" + machine.getId() + ". Starting wash cycle.");
-
         boolean washComplete = false;
+
         while (!washComplete) {
+            log("WAITING for a washing machine... (Washer queue: "
+                    + facility.getWasherQueueLength() + " ahead)");
+
+            WashingMachine machine = facility.acquireWasher(customerId);
+            log("ACQUIRED Washing Machine #" + machine.getId() + ". Starting wash cycle.");
+
             int washTime = randomBetween(4000, 6000);  // 4–6 seconds
             log("WASHING on Machine #" + machine.getId()
                     + " (cycle: " + (washTime / 1000.0) + "s)...");
@@ -75,17 +76,22 @@ public class Customer extends Thread {
                 facility.incrementWasherFailures();
                 machine.markFailed();
                 log("WASHER #" + machine.getId() + " FAILED mid-cycle on Customer-" + customerId
-                        + " - releasing and retrying...");
+                        + " - releasing machine and waiting 3 seconds before retry...");
+                
+                // Release faulty washer so resource returns to pool / can be serviced
+                facility.releaseWasher(machine);
                 sleep(3000);
-                machine.markRetrying();
-                log("RETRYING wash on Machine #" + machine.getId() + "...");
+                
+                log("RETRYING wash - re-entering washer queue for Customer-" + customerId + "...");
+                // Loop restarts -> re-acquires a washer from the pool
             } else {
                 washComplete = true;
                 log("WASH COMPLETE on Machine #" + machine.getId() + ".");
+                facility.releaseWasher(machine);
+                log("RELEASED Washing Machine #" + machine.getId() + ".");
             }
         }
 
-        facility.releaseWasher(machine);
         log("Customer-" + customerId + " finished washing, heading to dryers");
     }
 
@@ -106,32 +112,33 @@ public class Customer extends Thread {
     }
 
     private void performPayment() throws InterruptedException {
-        // Customer enters the physical payment line (incremented once per distinct customer)
-        facility.enterPaymentQueue();
-        log("WAITING for a payment kiosk... (Payment queue: "
-                + facility.getPaymentQueueSize() + " waiting)");
-
-        PaymentKiosk kiosk = null;
-
-        while (kiosk == null) {
-            try {
-                kiosk = facility.acquireKiosk(customerId);
-            } catch (InterruptedException e) {
-                if (Thread.currentThread().isInterrupted()) {
-                    facility.leavePaymentQueue();
-                    throw e;
-                }
-                log("Kiosk is DOWN (congestion) - Customer-" + customerId + " payment failed, still queued");
-                sleep(2000);
-            }
-        }
-
-        // Customer has now acquired a kiosk and left the waiting line
-        facility.leavePaymentQueue();
-        log("ACQUIRED Kiosk #" + kiosk.getId() + ". Processing payment.");
-
         boolean paymentComplete = false;
+
         while (!paymentComplete) {
+            // Customer enters the physical payment line (accounted per attempt)
+            facility.enterPaymentQueue();
+            log("WAITING for a payment kiosk... (Payment queue: "
+                    + facility.getPaymentQueueSize() + " waiting)");
+
+            PaymentKiosk kiosk = null;
+            try {
+                while (kiosk == null) {
+                    try {
+                        kiosk = facility.acquireKiosk(customerId);
+                    } catch (InterruptedException e) {
+                        if (Thread.currentThread().isInterrupted()) {
+                            throw e;
+                        }
+                        log("Kiosk is DOWN (congestion) - Customer-" + customerId + " payment failed, still queued");
+                        sleep(2000);
+                    }
+                }
+            } finally {
+                facility.leavePaymentQueue();
+            }
+
+            log("ACQUIRED Kiosk #" + kiosk.getId() + ". Processing payment.");
+
             int payTime = randomBetween(1000, 2000);  // 1–2 seconds
             log("PAYING at Kiosk #" + kiosk.getId()
                     + " (processing: " + (payTime / 1000.0) + "s)...");
@@ -141,18 +148,21 @@ public class Customer extends Thread {
                 facility.incrementKioskFailures();
                 kiosk.markFailed();
                 log("KIOSK FAILURE at Kiosk #" + kiosk.getId()
-                        + "! Waiting 2 seconds before retry...");
+                        + "! Releasing kiosk and waiting 2 seconds before retry...");
+                
+                // Release kiosk back to pool so other customers can use it
+                facility.releaseKiosk(kiosk);
                 sleep(2000);
-                kiosk.markRetrying();
-                log("RETRYING payment at Kiosk #" + kiosk.getId() + "...");
+                
+                log("RETRYING payment - Customer-" + customerId + " rejoining payment queue...");
+                // Loop restarts -> re-acquires a kiosk from pool
             } else {
                 paymentComplete = true;
                 log("PAYMENT COMPLETE at Kiosk #" + kiosk.getId() + ".");
+                facility.releaseKiosk(kiosk);
+                log("RELEASED Kiosk #" + kiosk.getId() + ".");
             }
         }
-
-        facility.releaseKiosk(kiosk);
-        log("RELEASED Kiosk #" + kiosk.getId() + ".");
     }
 
     private int randomBetween(int min, int max) {

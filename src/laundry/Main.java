@@ -67,7 +67,8 @@ public class Main {
         long simStart = System.currentTimeMillis();
         for (Customer customer : customers) {
             customer.start();
-            int interArrivalDelay = random.nextInt(MAX_ARRIVAL_DELAY_MS / TOTAL_CUSTOMERS * 2 + 1);
+            // Customers arrive randomly every 0–3 seconds (0–3000 ms) as specified
+            int interArrivalDelay = random.nextInt(MAX_ARRIVAL_DELAY_MS + 1);
             try {
                 Thread.sleep(interArrivalDelay);
             } catch (InterruptedException e) {
