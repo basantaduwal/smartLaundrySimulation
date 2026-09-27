@@ -174,7 +174,7 @@ public class LaundryGUI extends JFrame {
             }
         });
 
-        launchButton = new JButton("▶ Launch Simulation");
+        launchButton = new JButton("Launch Simulation");
         launchButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
         launchButton.setFocusPainted(false);
         launchButton.setBackground(new Color(14, 165, 233)); // Sky blue

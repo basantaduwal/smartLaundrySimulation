@@ -106,6 +106,8 @@ public class Customer extends Thread {
     }
 
     private void performPayment() throws InterruptedException {
+        // Customer enters the physical payment line (incremented once per distinct customer)
+        facility.enterPaymentQueue();
         log("WAITING for a payment kiosk... (Payment queue: "
                 + facility.getPaymentQueueSize() + " waiting)");
 
@@ -115,12 +117,17 @@ public class Customer extends Thread {
             try {
                 kiosk = facility.acquireKiosk(customerId);
             } catch (InterruptedException e) {
-                if (Thread.currentThread().isInterrupted()) throw e;
+                if (Thread.currentThread().isInterrupted()) {
+                    facility.leavePaymentQueue();
+                    throw e;
+                }
                 log("Kiosk is DOWN (congestion) - Customer-" + customerId + " payment failed, still queued");
                 sleep(2000);
             }
         }
 
+        // Customer has now acquired a kiosk and left the waiting line
+        facility.leavePaymentQueue();
         log("ACQUIRED Kiosk #" + kiosk.getId() + ". Processing payment.");
 
         boolean paymentComplete = false;

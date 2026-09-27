@@ -111,8 +111,15 @@ public class LaundryFacility {
         throw new IllegalStateException("No idle dryer found");
     }
 
-    public PaymentKiosk acquireKiosk(int customerId) throws InterruptedException {
+    public void enterPaymentQueue() {
         paymentQueueSize.incrementAndGet();
+    }
+
+    public void leavePaymentQueue() {
+        paymentQueueSize.decrementAndGet();
+    }
+
+    public PaymentKiosk acquireKiosk(int customerId) throws InterruptedException {
         kioskSemaphore.acquire();
 
         synchronized (kiosks) {
@@ -120,7 +127,6 @@ public class LaundryFacility {
                 if (k.isIdle()) {
                     boolean acquired = k.acquire(customerId);
                     if (acquired) {
-                        paymentQueueSize.decrementAndGet();
                         return k;
                     }
                 }
@@ -183,6 +189,5 @@ public class LaundryFacility {
 
     public void restoreAllKiosks() {
         for (PaymentKiosk k : kiosks) k.restore();
-        kioskSemaphore.release(2);
     }
 }
