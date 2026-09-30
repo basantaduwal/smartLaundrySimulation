@@ -413,6 +413,7 @@ public class LaundryGUI extends JFrame {
             t.setDaemon(true);
             return t;
         });
+
         poller.scheduleAtFixedRate(
                 () -> SwingUtilities.invokeLater(this::renderCurrentState),
                 100, 150, TimeUnit.MILLISECONDS

@@ -14,17 +14,17 @@ public class Customer extends Thread {
 
     private static final double FAILURE_PROBABILITY = 0.05; // 5% chance
 
-    private final int             customerId;
+    private final int customerId;
     private final LaundryFacility facility;
-    private final Random          random;
-    private final boolean         bonusMode;
+    private final Random random;
+    private final boolean bonusMode;
 
     public Customer(int customerId, LaundryFacility facility, boolean bonusMode) {
         super("Customer-" + customerId);
         this.customerId = customerId;
-        this.facility   = facility;
-        this.random     = new Random();
-        this.bonusMode  = bonusMode;
+        this.facility = facility;
+        this.random = new Random();
+        this.bonusMode = bonusMode;
     }
 
     @Override
@@ -77,11 +77,11 @@ public class Customer extends Thread {
                 machine.markFailed();
                 log("WASHER #" + machine.getId() + " FAILED mid-cycle on Customer-" + customerId
                         + " - releasing machine and waiting 3 seconds before retry...");
-                
+
                 // Release faulty washer so resource returns to pool / can be serviced
                 facility.releaseWasher(machine);
                 sleep(3000);
-                
+
                 log("RETRYING wash - re-entering washer queue for Customer-" + customerId + "...");
                 // Loop restarts -> re-acquires a washer from the pool
             } else {
@@ -149,11 +149,11 @@ public class Customer extends Thread {
                 kiosk.markFailed();
                 log("KIOSK FAILURE at Kiosk #" + kiosk.getId()
                         + "! Releasing kiosk and waiting 2 seconds before retry...");
-                
+
                 // Release kiosk back to pool so other customers can use it
                 facility.releaseKiosk(kiosk);
                 sleep(2000);
-                
+
                 log("RETRYING payment - Customer-" + customerId + " rejoining payment queue...");
                 // Loop restarts -> re-acquires a kiosk from pool
             } else {
@@ -171,7 +171,7 @@ public class Customer extends Thread {
 
     private void log(String message) {
         String threadName = Thread.currentThread().getName();
-        String formatted  = String.format("[%-12s] %s", threadName, message);
+        String formatted = String.format("[%-12s] %s", threadName, message);
         facility.log(formatted);
     }
 }
